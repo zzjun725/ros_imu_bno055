@@ -13,7 +13,7 @@
   <author email="roboticarts1@gmail.com">Robert Vasquez Zavaleta</author>
 
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <!--  <buildtool_depend>catkin</buildtool_depend> -->
   <build_depend>rospy</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_export_depend>rospy</build_export_depend>
@@ -25,6 +25,6 @@
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-
+	  <build_type>ament_python</build_type>
   </export>
 </package>
