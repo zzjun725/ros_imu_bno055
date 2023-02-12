@@ -1,8 +1,8 @@
 import launch
-import launch_ros.actions
+from launch_ros.actions import Node
 
 def generate_launch_description():
-    return launch.description([
+    return launch.LaunchDescription([
         launch.actions.DeclareLaunchArgument('serial_port', default_value='/dev/ttyUSB0'),
         launch.actions.DeclareLaunchArgument('frame_id', default_value='imu_link'),
         launch.actions.DeclareLaunchArgument('operation_mode', default_value='NDOF'),
@@ -11,7 +11,7 @@ def generate_launch_description():
         launch.actions.DeclareLaunchArgument('frequency', default_value='50'),
         launch.actions.DeclareLaunchArgument('use_magnetometer', default_value='false'),
         launch.actions.DeclareLaunchArgument('use_temperature', default_value='false'),
-        launch.ros.actions.Node(
+        Node(
             package='ros_imu_bno055',
             executable='imu_ros.py',
             name='ros_imu_bno055_node',
