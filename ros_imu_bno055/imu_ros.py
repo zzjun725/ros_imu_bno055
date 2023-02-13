@@ -102,6 +102,7 @@ class SensorIMU(Node):
         # self.reset_imu_device = rospy.Service('imu/reset_device', Empty, self.callback_reset_imu_device)
         # self.calibration_imu_staus = rospy.Service('imu/calibration_status', Trigger, self.callback_calibration_imu_status)
         # [ros2]
+        self.timer = self.create_timer(1/self.frequency, self.timer_callback)
         self.pub_imu_data = self.create_publisher(Imu, "imu/data", 10)
         if self.use_magnetometer == True:
             self.pub_imu_magnetometer = self.create_publisher(MagneticField, "imu/magnetometer", 10)
@@ -115,6 +116,29 @@ class SensorIMU(Node):
         # [ros2]
         rclpy.logging.get_logger(self.node_name).info(self.node_name + " ready!")
 
+        ## INIT IMU ##
+        # Reset IMU to reset axis orientation.
+        if self.reset_orientation == True:
+            self.reset_imu()
+        # Configuration is necessary every time the IMU is turned on or reset
+        self.set_imu_configuration()
+
+    def timer_callback(self):
+        if self.stop_request == False:
+            # start_time = time.time()
+            self.bno055.update_imu_data()
+            # print("--- %s seconds ---" % (time.time() - start_time))
+
+            # Publish imu data
+            self.publish_imu_data()
+
+            # Publish magnetometer data
+            if self.use_magnetometer == True:
+                self.publish_imu_magnetometer()
+
+            # Publish temperature data
+            if self.use_temperature == True:
+                self.publish_imu_temperature()
 
     def get_ros_params(self):
         # self.serial_port = rospy.get_param(self.node_name + '/serial_port','/dev/ttyUSB0')
@@ -432,57 +456,51 @@ class SensorIMU(Node):
 
         self.pub_imu_temperature.publish(imu_temperature)
 
-    def run(self):
-
-        # Reset IMU to reset axis orientation. 
-        if self.reset_orientation == True:
-            self.reset_imu()
-
-        # Configuration is necessary every time the IMU is turned on or reset
-        self.set_imu_configuration()
-
-        # Set frequency
-        # rate = rospy.Rate(self.frequency)
-        # [ros2]
-        rate = self.create_timer(1)
-
-        # while not rospy.is_shutdown():
-        # [ros2]
-        while rclpy.ok():
-            if self.stop_request == False:
-                #start_time = time.time()
-                self.bno055.update_imu_data()
-                #print("--- %s seconds ---" % (time.time() - start_time)) 
-
-                # Publish imu data
-                self.publish_imu_data()
-   
-                # Publish magnetometer data
-                if self.use_magnetometer == True:
-                    self.publish_imu_magnetometer()
-
-                # Publish temperature data                
-                if self.use_temperature == True:
-                    self.publish_imu_temperature()
-
-            # rate.sleep()
-            # [ros2]
-            rate.sleep()
+    # def run(self):
+    #
+    #     # Reset IMU to reset axis orientation.
+    #     if self.reset_orientation == True:
+    #         self.reset_imu()
+    #
+    #     # Configuration is necessary every time the IMU is turned on or reset
+    #     self.set_imu_configuration()
+    #
+    #     # Set frequency
+    #     # rate = rospy.Rate(self.frequency)
+    #     # [ros2]
+    #     rate = self.create_timer(1)
+    #
+    #     # while not rospy.is_shutdown():
+    #     # [ros2]
+    #     while rclpy.ok():
+    #         if self.stop_request == False:
+    #             #start_time = time.time()
+    #             self.bno055.update_imu_data()
+    #             #print("--- %s seconds ---" % (time.time() - start_time))
+    #
+    #             # Publish imu data
+    #             self.publish_imu_data()
+    #
+    #             # Publish magnetometer data
+    #             if self.use_magnetometer == True:
+    #                 self.publish_imu_magnetometer()
+    #
+    #             # Publish temperature data
+    #             if self.use_temperature == True:
+    #                 self.publish_imu_temperature()
+    #
+    #         # rate.sleep()
+    #         # [ros2]
+    #         rate.sleep()
 
 def main(args=None):
     # [ros2]
     rclpy.init(args=None)
-    gym_bridge = SensorIMU()
-    gym_bridge.run()
+    imuNode = SensorIMU()
+    rclpy.spin(imuNode)
 
 if __name__ == '__main__':
     main()
-    # imu = SensorIMU()
-    #
-    # try:
-    #     imu.run()
-    #
-    # except rospy.ROSInterruptException:
-    #     pass
+
 
 
