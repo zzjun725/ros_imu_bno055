@@ -38,32 +38,49 @@ Author:  Robert Vasquez Zavaleta
 
 """
 
-import rospy
+# import rospy
+import rclpy
+from rclpy.node import Node
 import os
 from ros_imu_bno055.imu_bno055_api import * 
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import Temperature
 from sensor_msgs.msg import MagneticField
-from std_srvs.srv import Empty, EmptyResponse
-from std_srvs.srv import Trigger, TriggerResponse 
+# from std_srvs.srv import Empty, EmptyResponse
+# from std_srvs.srv import Trigger, TriggerResponse
+from std_srvs.srv import Empty
+from std_srvs.srv import Trigger
 
 # rosrun tf static_transform_publisher 0.0 0.0 0.0 0.0 0.0 0.0 base_link imu_link 1000
 
-class SensorIMU:
+class SensorIMU(Node):
 
     def __init__(self):
 
-        # Init node
-        rospy.init_node('ros_imu_bno055_node', anonymous=False)
+        # # Init node
+        # rospy.init_node('ros_imu_bno055_node', anonymous=False)
+        #
+        # # Get node name
+        # self.node_name = rospy.get_name()
 
-        # Get node name
-        self.node_name = rospy.get_name()
+        # [ros2]
+        super().__init__('ros_imu_bno055_node')
+        self.node_name = "ros_imu_bno055_node"
+        self.declare_parameter('serial_port')
+        self.declare_parameter('frame_id')
+        self.declare_parameter('operation_mode')
+        self.declare_parameter('oscillator')
+        self.declare_parameter('reset_orientation')
+        self.declare_parameter('frequency')
+        self.declare_parameter('use_magnetometer')
+        self.declare_parameter('use_temperature')
+
 
         # Get ros params
         self.get_ros_params()
 
         # Create an IMU instance
-        self.bno055 = BoschIMU(port = self.serial_port)
+        self.bno055 = BoschIMU(port=self.serial_port)
 
         # Internal variables
         self.imu_data_seq_counter = 0
@@ -72,37 +89,54 @@ class SensorIMU:
         self.stop_request = False
 
         # Create topics
-        self.pub_imu_data = rospy.Publisher('imu/data', Imu, queue_size=1)
-
+        # self.pub_imu_data = rospy.Publisher('imu/data', Imu, queue_size=1)
+        #
+        # if self.use_magnetometer == True:
+        #     self.pub_imu_magnetometer = rospy.Publisher('imu/magnetometer', MagneticField, queue_size=1)
+        #
+        # if self.use_temperature == True:
+        #     self.pub_imu_temperature = rospy.Publisher('imu/temperature', Temperature, queue_size=1)
+        #
+        #
+        # # Create service
+        # self.reset_imu_device = rospy.Service('imu/reset_device', Empty, self.callback_reset_imu_device)
+        # self.calibration_imu_staus = rospy.Service('imu/calibration_status', Trigger, self.callback_calibration_imu_status)
+        # [ros2]
+        self.pub_imu_data = self.create_publisher(Imu, "imu/data", 10)
         if self.use_magnetometer == True:
-            self.pub_imu_magnetometer = rospy.Publisher('imu/magnetometer', MagneticField, queue_size=1)
-        
+            self.pub_imu_magnetometer = self.create_publisher(MagneticField, "imu/magnetometer", 10)
         if self.use_temperature == True:
-            self.pub_imu_temperature = rospy.Publisher('imu/temperature', Temperature, queue_size=1)
-
-
-        # Create service
-        self.reset_imu_device = rospy.Service('imu/reset_device', Empty, self.callback_reset_imu_device)
-        self.calibration_imu_staus = rospy.Service('imu/calibration_status', Trigger, self.callback_calibration_imu_status)
-        
+            self.pub_imu_temperature = self.create_publisher(Temperature, "imu/temperature" ,queue_size=1)
+        self.reset_imu_device = self.create_service(Empty, "imu/reset_device", self.callback_reset_imu_device)
+        self.calibration_imu_staus = self.create_service(Trigger, "imu/calibration_status", self.callback_calibration_imu_status)
 
         # Print node status
-        rospy.loginfo(self.node_name + " ready!")
+        # rospy.loginfo(self.node_name + " ready!")
+        # [ros2]
+        rclpy.logging.get_logger().info(self.node_name + " ready!")
 
 
     def get_ros_params(self):
+        # self.serial_port = rospy.get_param(self.node_name + '/serial_port','/dev/ttyUSB0')
+        # self.frame_id = rospy.get_param(self.node_name + '/frame_id', 'imu_link')
+        # self.operation_mode_str = rospy.get_param(self.node_name + '/operation_mode', 'IMU')
+        # self.oscillator_str = rospy.get_param(self.node_name + '/oscillator', 'INTERNAL')
+        # self.reset_orientation = rospy.get_param(self.node_name + '/reset_orientation', True)
+        # self.frequency = rospy.get_param(self.node_name + '/frequency', 20)
+        # self.use_magnetometer = rospy.get_param(self.node_name + '/use_magnetometer', False)
+        # self.use_temperature = rospy.get_param(self.node_name + '/use_temperature', False)
 
-        self.serial_port = rospy.get_param(self.node_name + '/serial_port','/dev/ttyUSB0')
-        self.frame_id = rospy.get_param(self.node_name + '/frame_id', 'imu_link')
-        self.operation_mode_str = rospy.get_param(self.node_name + '/operation_mode', 'IMU')
-        self.oscillator_str = rospy.get_param(self.node_name + '/oscillator', 'INTERNAL')
-        self.reset_orientation = rospy.get_param(self.node_name + '/reset_orientation', True)
-        self.frequency = rospy.get_param(self.node_name + '/frequency', 20)
-        self.use_magnetometer = rospy.get_param(self.node_name + '/use_magnetometer', False)
-        self.use_temperature = rospy.get_param(self.node_name + '/use_temperature', False)
+        # [ros2]
+        self.serial_port = self.get_parameter('serial_port').value
+        self.frame_id = self.get_parameter('frame_id').value
+        self.operation_mode_str = self.get_parameter('operation_mode').value
+        self.oscillator_str = self.get_parameter('oscillator').value
+        self.reset_orientation = self.get_parameter('reset_orientation').value
+        self.frequency = self.get_parameter('frequency').value
+        self.use_magnetometer = self.get_parameter('use_magnetometer').value
+        self.use_temperature = self.get_parameter('use_temperature').value
 
         switcher = {
-
             'IMU': IMU,
             'COMPASS': COMPASS,
             'M4G': M4G,
@@ -113,7 +147,6 @@ class SensorIMU:
         self.operation_mode = switcher.get(self.operation_mode_str, 'IMU')
 
         switcher = {
-
             'EXTERNAL': EXTERNAL_OSCILLATOR,
             'INTERNAL': INTERNAL_OSCILLATOR 
         }
@@ -128,10 +161,15 @@ class SensorIMU:
         # Enable IMU configuration
         status_1 = self.bno055.enable_imu_configuration()
 
+        # if status_1 == RESPONSE_OK:
+        #     rospy.loginfo("Configuration mode activated")
+        # else:
+        #     rospy.logerr("Unable to activate configuration mode")
+        # [ros2]
         if status_1 == RESPONSE_OK:
-            rospy.loginfo("Configuration mode activated")
+            rclpy.logging.get_logger().info("Configuration mode activated")
         else:
-            rospy.logerr("Unable to activate configuration mode")
+            rclpy.logging.get_logger().error("Unable to activate configuration mode")
 
         
         # Set IMU units
@@ -142,66 +180,99 @@ class SensorIMU:
                                             orientation_mode = WINDOWS_ORIENTATION    # Orientation mode
                                            )
                                     
+        # if status_2 == RESPONSE_OK:
+        #     rospy.loginfo("Units configured successfully")
+        # else:
+        #     rospy.logwarn("Unable to configure units")
+        # [ros2]
         if status_2 == RESPONSE_OK:
-            rospy.loginfo("Units configured successfully")
+            rclpy.logging.get_logger().info("Units configured successfully")
         else:
-            rospy.logwarn("Unable to configure units")
+            rclpy.logging.get_logger().warn("Unable to configure units")
 
 
         # Set imu axis
         status_3 = self.bno055.set_imu_axis(axis_placement = P1)
 
+        # if status_3 == RESPONSE_OK:
+        #     rospy.loginfo("Axis configured successfully")
+        # else:
+        #     rospy.logwarn("Unable to configure axis")
+        # [ros2]
         if status_3 == RESPONSE_OK:
-            rospy.loginfo("Axis configured successfully")
+            rclpy.logging.get_logger().info("Axis configured successfully")
         else:
-            rospy.logwarn("Unable to configure axis")
+            rclpy.logging.get_logger().warn("Unable to configure axis")
 
         
         status_calibration = self.load_calibration_from_file()
 
+        # if status_calibration == RESPONSE_OK:
+        #     rospy.loginfo("Calibration loaded successfully")
+        # else:
+        #     rospy.loginfo("Calibration not detected. IMU will use default calibration")
+        # [ros2]
         if status_calibration == RESPONSE_OK:
-            rospy.loginfo("Calibration loaded successfully")
+            rclpy.logging.get_logger().info("Calibration loaded successfully")
         else:
-            rospy.loginfo("Calibration not detected. IMU will use default calibration")
-
+            rclpy.logging.get_logger().info("Calibration not detected. IMU will use default calibration")
         
         status_oscillator = self.bno055.set_oscillator(oscillator_type = self.oscillator)
         
+        # if status_oscillator == RESPONSE_OK:
+        #         rospy.loginfo("%s oscillator configured successfully", self.oscillator_str)
+        #
+        # else:
+        #     rospy.loginfo("Unable to configure oscillator")
+        # [ros2]
         if status_oscillator == RESPONSE_OK:
-                rospy.loginfo("%s oscillator configured successfully", self.oscillator_str)
+            rclpy.logging.get_logger().info("%s oscillator configured successfully", self.oscillator_str)
 
         else:
-            rospy.loginfo("Unable to configure oscillator")
-
+            rclpy.logging.get_logger().info("Unable to configure oscillator")
 
         # Set operation mode. Exit configuration mode and activate IMU to work
         status_4 = self.bno055.set_imu_operation_mode(operation_mode = self.operation_mode)
 
+        # if status_4 == RESPONSE_OK:
+        #     rospy.loginfo("Operation mode configured successfully")
+        # else:
+        #     rospy.logerr("Unable to configure operation mode ")
+        # [ros2]
         if status_4 == RESPONSE_OK:
-            rospy.loginfo("Operation mode configured successfully")
+            rclpy.logging.get_logger().info("Operation mode configured successfully")
         else:
-            rospy.logerr("Unable to configure operation mode ") 
+            rclpy.logging.get_logger().error("Unable to configure operation mode ")
 
-
-        # Check all status 
-        if (status_1 == RESPONSE_OK and status_2 == RESPONSE_OK 
+        # Check all status
+        # if (status_1 == RESPONSE_OK and status_2 == RESPONSE_OK
+        #    and status_2 == RESPONSE_OK and status_4 == RESPONSE_OK):
+        #
+        #     rospy.loginfo("IMU is working now in %s mode!", self.operation_mode_str)
+        #
+        # else:
+        #     rospy.logwarn("The IMU was not configured correctly. It may not work")
+        # [ros2]
+        if (status_1 == RESPONSE_OK and status_2 == RESPONSE_OK
            and status_2 == RESPONSE_OK and status_4 == RESPONSE_OK):
-
-            rospy.loginfo("IMU is working now in %s mode!", self.operation_mode_str)
-
+            rclpy.logging.get_logger().info("IMU is working now in %s mode!", self.operation_mode_str)
         else:
-            rospy.logwarn("The IMU was not configured correctly. It may not work")
+            rclpy.logging.get_logger().warn("The IMU was not configured correctly. It may not work")
 
 
     def reset_imu(self):
 
         status = self.bno055.reset_imu()
 
+        # if status == RESPONSE_OK:
+        #     rospy.loginfo("IMU successfully reset")
+        # else:
+        #     rospy.logwarn("Reset IMU failed")
+        # [ros2]
         if status == RESPONSE_OK:
-            rospy.loginfo("IMU successfully reset")
+            rclpy.logging.get_logger().info("IMU successfully reset")
         else:
-            rospy.logwarn("Reset IMU failed")
-
+            rclpy.logging.get_logger().warn("Reset IMU failed")
 
     def load_calibration_from_file(self):
 
@@ -228,30 +299,41 @@ class SensorIMU:
         return status
     
 
-    def callback_reset_imu_device(self, req):
+    def callback_reset_imu_device(self, req, result):
         
-        rospy.loginfo("====================")
-        rospy.loginfo("Service: Reseting IMU...")
+        # rospy.loginfo("====================")
+        # rospy.loginfo("Service: Reseting IMU...")
+        # self.stop_request = True
+        # rospy.sleep(1)
+        # self.reset_imu()
+        # self.set_imu_configuration()
+        # self.stop_request = False
+        # rospy.loginfo("Service: IMU reset completed!")
+        # [ros2]
+
+        rclpy.logging.get_logger().info("====================")
+        rclpy.logging.get_logger().info("Service: Reseting IMU...")
         self.stop_request = True
-        rospy.sleep(1)
+        rate = self.create_timer(1)
+        rate.sleep()
         self.reset_imu()
         self.set_imu_configuration()
         self.stop_request = False
-        rospy.loginfo("Service: IMU reset completed!")
-
-        result = EmptyResponse()
+        rclpy.logging.get_logger().info("Service: IMU reset completed!")
+        # [ros2]
+        # result = EmptyResponse()
         return result
 
 
-    def callback_calibration_imu_status(self, req):
+    def callback_calibration_imu_status(self, req, result):
 
         self.stop_request = True
         # Delay proportional to the frequency of the node
         time.sleep(1/self.frequency)
         calibration_status, status = self.bno055.get_calibration_status()
         self.stop_request = False
-
-        result = TriggerResponse()
+        # [ros2]
+        # result = TriggerResponse()
 
         if status == RESPONSE_OK:
             
@@ -264,7 +346,10 @@ class SensorIMU:
             result.success = True
 
         else:
-            rospy.logwarn("Unable to read IMU calibration")
+            # rospy.logwarn("Unable to read IMU calibration")
+            # [ros2]
+            rclpy.logging.get_logger().warn("Unable to read IMU calibration")
+
             result.message = "Unable to read IMU calibration"
             result.success = False
 
@@ -278,7 +363,10 @@ class SensorIMU:
         linear_acceleration = self.bno055.get_linear_acceleration()
         gyroscope = self.bno055.get_gyroscope()
         
-        imu_data.header.stamp = rospy.Time.now()
+        # imu_data.header.stamp = rospy.Time.now()
+        # [ros2]
+        imu_data.header.stamp = self.get_clock().now().to_msg()
+
         imu_data.header.frame_id = self.frame_id
         imu_data.header.seq = self.imu_data_seq_counter
 
@@ -310,7 +398,10 @@ class SensorIMU:
 
         magnetometer = self.bno055.get_magnetometer()
 
-        imu_magnetometer.header.stamp = rospy.Time.now()
+        # imu_magnetometer.header.stamp = rospy.Time.now()
+        # [ros2]
+        imu_magnetometer.header.stamp = self.get_clock().now().to_msg()
+
         imu_magnetometer.header.frame_id = self.frame_id
         imu_magnetometer.header.seq = self.imu_magnetometer_seq_counter
 
@@ -328,7 +419,10 @@ class SensorIMU:
 
         temperature = self.bno055.get_temperature()
 
-        imu_temperature.header.stamp = rospy.Time.now()
+        # imu_temperature.header.stamp = rospy.Time.now()
+        # [ros2]
+        imu_temperature.header.stamp = self.get_clock().now().to_msg()
+
         imu_temperature.header.frame_id = self.frame_id
         imu_temperature.header.seq = self.imu_temperature_seq_counter
 
@@ -348,12 +442,14 @@ class SensorIMU:
         self.set_imu_configuration()
 
         # Set frequency
-        rate = rospy.Rate(self.frequency)
+        # rate = rospy.Rate(self.frequency)
+        # [ros2]
+        rate = self.create_timer(1)
 
-        while not rospy.is_shutdown():
-
+        # while not rospy.is_shutdown():
+        # [ros2]
+        while rclpy.ok():
             if self.stop_request == False:
-                
                 #start_time = time.time()
                 self.bno055.update_imu_data()
                 #print("--- %s seconds ---" % (time.time() - start_time)) 
@@ -369,16 +465,24 @@ class SensorIMU:
                 if self.use_temperature == True:
                     self.publish_imu_temperature()
 
+            # rate.sleep()
+            # [ros2]
             rate.sleep()
 
+def main(args=None):
+    # [ros2]
+    rclpy.init(args=None)
+    gym_bridge = SensorIMU()
+    gym_bridge.run()
 
 if __name__ == '__main__':
+    main()
+    # imu = SensorIMU()
+    #
+    # try:
+    #     imu.run()
+    #
+    # except rospy.ROSInterruptException:
+    #     pass
 
-    imu = SensorIMU()
-
-    try:
-        imu.run()
-
-    except rospy.ROSInterruptException:
-        pass
 
