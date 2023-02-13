@@ -226,7 +226,7 @@ class SensorIMU(Node):
         #     rospy.loginfo("Unable to configure oscillator")
         # [ros2]
         if status_oscillator == RESPONSE_OK:
-            rclpy.logging.get_logger(self.node_name).info("%s oscillator configured successfully", self.oscillator_str)
+            rclpy.logging.get_logger(self.node_name).info(f"{self.oscillator_str} oscillator configured successfully")
 
         else:
             rclpy.logging.get_logger(self.node_name).info("Unable to configure oscillator")
@@ -255,7 +255,7 @@ class SensorIMU(Node):
         # [ros2]
         if (status_1 == RESPONSE_OK and status_2 == RESPONSE_OK
            and status_2 == RESPONSE_OK and status_4 == RESPONSE_OK):
-            rclpy.logging.get_logger(self.node_name).info("IMU is working now in %s mode!", self.operation_mode_str)
+            rclpy.logging.get_logger(self.node_name).info(f"IMU is working now in {self.operation_mode_str} mode!")
         else:
             rclpy.logging.get_logger(self.node_name).warn("The IMU was not configured correctly. It may not work")
 
