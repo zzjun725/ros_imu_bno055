@@ -113,7 +113,7 @@ class SensorIMU(Node):
         # Print node status
         # rospy.loginfo(self.node_name + " ready!")
         # [ros2]
-        rclpy.logging.get_logger().info(self.node_name + " ready!")
+        rclpy.logging.get_logger(self.node_name).info(self.node_name + " ready!")
 
 
     def get_ros_params(self):
@@ -167,9 +167,9 @@ class SensorIMU(Node):
         #     rospy.logerr("Unable to activate configuration mode")
         # [ros2]
         if status_1 == RESPONSE_OK:
-            rclpy.logging.get_logger().info("Configuration mode activated")
+            rclpy.logging.get_logger(self.node_name).info("Configuration mode activated")
         else:
-            rclpy.logging.get_logger().error("Unable to activate configuration mode")
+            rclpy.logging.get_logger(self.node_name).error("Unable to activate configuration mode")
 
         
         # Set IMU units
@@ -186,9 +186,9 @@ class SensorIMU(Node):
         #     rospy.logwarn("Unable to configure units")
         # [ros2]
         if status_2 == RESPONSE_OK:
-            rclpy.logging.get_logger().info("Units configured successfully")
+            rclpy.logging.get_logger(self.node_name).info("Units configured successfully")
         else:
-            rclpy.logging.get_logger().warn("Unable to configure units")
+            rclpy.logging.get_logger(self.node_name).warn("Unable to configure units")
 
 
         # Set imu axis
@@ -200,9 +200,9 @@ class SensorIMU(Node):
         #     rospy.logwarn("Unable to configure axis")
         # [ros2]
         if status_3 == RESPONSE_OK:
-            rclpy.logging.get_logger().info("Axis configured successfully")
+            rclpy.logging.get_logger(self.node_name).info("Axis configured successfully")
         else:
-            rclpy.logging.get_logger().warn("Unable to configure axis")
+            rclpy.logging.get_logger(self.node_name).warn("Unable to configure axis")
 
         
         status_calibration = self.load_calibration_from_file()
@@ -213,9 +213,9 @@ class SensorIMU(Node):
         #     rospy.loginfo("Calibration not detected. IMU will use default calibration")
         # [ros2]
         if status_calibration == RESPONSE_OK:
-            rclpy.logging.get_logger().info("Calibration loaded successfully")
+            rclpy.logging.get_logger(self.node_name).info("Calibration loaded successfully")
         else:
-            rclpy.logging.get_logger().info("Calibration not detected. IMU will use default calibration")
+            rclpy.logging.get_logger(self.node_name).info("Calibration not detected. IMU will use default calibration")
         
         status_oscillator = self.bno055.set_oscillator(oscillator_type = self.oscillator)
         
@@ -226,10 +226,10 @@ class SensorIMU(Node):
         #     rospy.loginfo("Unable to configure oscillator")
         # [ros2]
         if status_oscillator == RESPONSE_OK:
-            rclpy.logging.get_logger().info("%s oscillator configured successfully", self.oscillator_str)
+            rclpy.logging.get_logger(self.node_name).info("%s oscillator configured successfully", self.oscillator_str)
 
         else:
-            rclpy.logging.get_logger().info("Unable to configure oscillator")
+            rclpy.logging.get_logger(self.node_name).info("Unable to configure oscillator")
 
         # Set operation mode. Exit configuration mode and activate IMU to work
         status_4 = self.bno055.set_imu_operation_mode(operation_mode = self.operation_mode)
@@ -240,9 +240,9 @@ class SensorIMU(Node):
         #     rospy.logerr("Unable to configure operation mode ")
         # [ros2]
         if status_4 == RESPONSE_OK:
-            rclpy.logging.get_logger().info("Operation mode configured successfully")
+            rclpy.logging.get_logger(self.node_name).info("Operation mode configured successfully")
         else:
-            rclpy.logging.get_logger().error("Unable to configure operation mode ")
+            rclpy.logging.get_logger(self.node_name).error("Unable to configure operation mode ")
 
         # Check all status
         # if (status_1 == RESPONSE_OK and status_2 == RESPONSE_OK
@@ -255,9 +255,9 @@ class SensorIMU(Node):
         # [ros2]
         if (status_1 == RESPONSE_OK and status_2 == RESPONSE_OK
            and status_2 == RESPONSE_OK and status_4 == RESPONSE_OK):
-            rclpy.logging.get_logger().info("IMU is working now in %s mode!", self.operation_mode_str)
+            rclpy.logging.get_logger(self.node_name).info("IMU is working now in %s mode!", self.operation_mode_str)
         else:
-            rclpy.logging.get_logger().warn("The IMU was not configured correctly. It may not work")
+            rclpy.logging.get_logger(self.node_name).warn("The IMU was not configured correctly. It may not work")
 
 
     def reset_imu(self):
@@ -270,9 +270,9 @@ class SensorIMU(Node):
         #     rospy.logwarn("Reset IMU failed")
         # [ros2]
         if status == RESPONSE_OK:
-            rclpy.logging.get_logger().info("IMU successfully reset")
+            rclpy.logging.get_logger(self.node_name).info("IMU successfully reset")
         else:
-            rclpy.logging.get_logger().warn("Reset IMU failed")
+            rclpy.logging.get_logger(self.node_name).warn("Reset IMU failed")
 
     def load_calibration_from_file(self):
 
@@ -311,15 +311,15 @@ class SensorIMU(Node):
         # rospy.loginfo("Service: IMU reset completed!")
         # [ros2]
 
-        rclpy.logging.get_logger().info("====================")
-        rclpy.logging.get_logger().info("Service: Reseting IMU...")
+        rclpy.logging.get_logger(self.node_name).info("====================")
+        rclpy.logging.get_logger(self.node_name).info("Service: Reseting IMU...")
         self.stop_request = True
         rate = self.create_timer(1)
         rate.sleep()
         self.reset_imu()
         self.set_imu_configuration()
         self.stop_request = False
-        rclpy.logging.get_logger().info("Service: IMU reset completed!")
+        rclpy.logging.get_logger(self.node_name).info("Service: IMU reset completed!")
         # [ros2]
         # result = EmptyResponse()
         return result
@@ -348,7 +348,7 @@ class SensorIMU(Node):
         else:
             # rospy.logwarn("Unable to read IMU calibration")
             # [ros2]
-            rclpy.logging.get_logger().warn("Unable to read IMU calibration")
+            rclpy.logging.get_logger(self.node_name).warn("Unable to read IMU calibration")
 
             result.message = "Unable to read IMU calibration"
             result.success = False
